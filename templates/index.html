@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pixel Trolley Simulator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      background: #1b1f24;
+      color: #e6e6e6;
+      font-family: monospace;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 960px;
+      margin: auto;
+      padding: 20px;
+    }
+    canvas {
+      background: #2a313a;
+      border: 6px solid #000;
+      display: block;
+      margin-bottom: 20px;
+      image-rendering: pixelated;
+    }
+    button {
+      font-family: monospace;
+      font-weight: bold;
+      padding: 10px 16px;
+      margin: 6px;
+      border: 3px solid #000;
+      background: #49d0ff;
+      cursor: pointer;
+    }
+    .info {
+      margin-top: 10px;
+    }
+    .meter {
+      background: #000;
+      border: 3px solid #000;
+      height: 24px;
+      width: 100%;
+      margin-top: 10px;
+      position: relative;
+    }
+    .meter-fill {
+      background: #6be06b;
+      height: 100%;
+      width: 0%;
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚋 Pixel Trolley Simulator</h1>
+    <canvas id="scene" width="640" height="360"></canvas>
+    <div>
+      <button onclick="move('prev')">⬅ Prev Station</button>
+      <button onclick="move('next')">Next Station ➡</button>
+      <button onclick="load()">📦 Load</button>
+      <button onclick="unload()">📤 Unload</button>
+    </div>
+    <div class="info">
+      <p><strong>Station:</strong> <span id="station">—</span></p>
+      <p><strong>Cargo:</strong> <span id="cargo">0</span>/<span id="capacity">0</span></p>
+      <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("scene");
+    const ctx = canvas.getContext("2d");
+
+    function drawScene(state) {
+      ctx.fillStyle = "#2a313a";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw trolley
+      ctx.fillStyle = "#6f8fad";
+      ctx.fillRect(240, 200, 160, 56);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(264, 258, 28, 14);
+      ctx.fillRect(348, 258, 28, 14);
+
+      // Draw cargo
+      const cargo = state.trolley.cargo;
+      for (let i = 0; i < cargo; i++) {
+        const x = 250 + (i % 5) * 30;
+        const y = 220 - Math.floor(i / 5) * 20;
+        ctx.fillStyle = "#ffb649";
+        ctx.fillRect(x, y, 20, 20);
+        ctx.strokeStyle = "#000";
+        ctx.strokeRect(x, y, 20, 20);
+      }
+
+      // Draw station name
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px monospace";
+      ctx.fillText(state.stations[state.current_station_index], 260, 40);
+    }
+
+    async function fetchState() {
+      const res = await fetch("/state");
+      const state = await res.json();
+      updateUI(state);
+    }
+
+    function updateUI(state) {
+      document.getElementById("station").textContent = state.stations[state.current_station_index];
+      document.getElementById("cargo").textContent = state.trolley.cargo;
+      document.getElementById("capacity").textContent = state.trolley.capacity;
+      document.getElementById("meterFill").style.width = (state.trolley.cargo / state.trolley.capacity * 100) + "%";
+      drawScene(state);
+    }
+
+    async function move(direction) {
+      const res = await fetch("/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ direction })
+      });
+      const state = await res.json();
+      updateUI(state);
+    }
+
+    async function load() {
+      const res = await fetch("/load", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 1 })
+      });
+      const state = await res.json();
+      updateUI(state);
+    }
+
+    async function unload() {
+      const res = await fetch("/unload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 1 })
+      });
+      const state = await res.json();
+      updateUI(state);
+    }
+
+    fetchState();
+  </script>
+</body>
+</html>
